@@ -27,19 +27,20 @@
         return fract(sin(dot(st.xy, vec2(20., 30.1244))) * 25. + u_time);
     }
 
-    float circle(in vec2 _st, in float _radius){
-        vec2 l = _st-vec2(0.5);
-        return 1.-smoothstep(_radius-(_radius*0.01),
-        _radius+(_radius*0.01),
-        dot(l,l)*4.0);
-    }
-
     float box(vec2 _st, vec2 _size, float _smoothEdges){
         _size = vec2(0.5)-_size*0.5;
         vec2 aa = vec2(_smoothEdges*0.5);
         vec2 uv = smoothstep(_size,_size+aa,_st);
         uv *= smoothstep(_size,_size+aa,vec2(1.0)-_st);
         return uv.x*uv.y;
+    }
+
+    vec2 brickTile(vec2 _st, float _zoom) {
+        _st *= _zoom;
+        // offsetting of the rows
+        _st.x += step(1., mod(_st.y, 2.0)) * 3.33 * sin(u_time);
+        _st.x += step(0., mod(_st.y,2.0)) * 2.9 * cos(u_time * PI * 0.25);
+        return fract(_st);
     }
 
     vec2 tile(vec2 _st, float _zoom) {
@@ -54,33 +55,22 @@
         return _st;
     }
 
-    vec3 colorA = vec3(0.588, 0.905, 0.992);
-    vec3 colorB = vec3(0.925, 0.501, 0.054);
-
     void main() {
         vec2 st = gl_FragCoord.xy/u_resolution.xy;
         st.x *= u_resolution.x/u_resolution.y; // normalize x
         vec3 color = vec3(0.0);
-        vec2 tiled = tile(st, 4.0);
-        // use a mat2 to rotate
-//        st = rotate2D(st, PI*0.25);
-        //color = vec3(circle(tiled, 0.3));
-//        color = vec3(box(tiled, vec2(0.4), 0.01));
-        //vec3 color = (st.x, st.y, 0.0);
+        // divide the space into 4
+        //st = tile(st, 4.0);
 
-//        float left = step(0.1, st.x); // if x more than 0.1, make it 1.0
-//        float bottom = step(0.1, st.y);
-//        color = vec3(left * bottom);
+        // applying brick tiling (offset effect)
+        st = brickTile(st, 5.0);
 
-        // edit: we can also pass in two values instead of 1
-        vec2 bl = smoothstep(vec2(0.1), st);
-        float pct = bl.x * bl.y;
+        // use matrix to rotate
+        //st = rotate2D(st, sin(u_time) * PI);
 
-        // we can invert
-        vec2 tr = smoothstep(vec2(0.1), 1.0-st);
-        pct *= tr.x * tr.y;
+        color = vec3(box(st, vec2(0.7), 0.01));
 
-        gl_FragColor = vec4(vec3(pct), 1.0);
+        gl_FragColor = vec4(color, 1.0);
 
     }
 </script>
