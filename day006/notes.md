@@ -1,0 +1,3 @@
+#day006
+
+today i learned to play with layers, how to use the mix() function, grids...
