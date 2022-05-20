@@ -2,7 +2,7 @@
 <html>
 <head>
     <meta charset="utf-8">
-    <title>shader lab-9</title>
+    <title>shader lab-10</title>
 </head>
 <body>
 <div id="container"></div>
@@ -29,7 +29,7 @@
     float circle(vec2 st, float radius) {
         vec2 pos = vec2(0.5)-st;
         radius *= 0.75;
-//        return 1.-smoothstep(radius-(radius*0.01), radius+(radius*0.01), dot(pos,pos)*10.);
+        //        return 1.-smoothstep(radius-(radius*0.01), radius+(radius*0.01), dot(pos,pos)*10.);
         return smoothstep(1.0-radius, 1.0-radius+radius*0.01, dot(pos, pos)*PI);
     }
 
@@ -61,8 +61,8 @@
                 _st.y -= fract(time) * 1.0;
             }
         }
-//        _st.x += step(1., mod(_st.y, 2.0)) * u_time + step(1., mod(_st.x, 2.0));
-//        _st.y *= step(1., mod(_st.x, 2.));
+        //        _st.x += step(1., mod(_st.y, 2.0)) * u_time + step(1., mod(_st.x, 2.0));
+        //        _st.y *= step(1., mod(_st.x, 2.));
         return fract(_st);
     }
 
