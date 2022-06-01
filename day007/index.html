@@ -23,35 +23,70 @@
 
     const float PI = 3.1415926535897932384626433832795;
 
-    vec3 colorB = vec3(1.000,0.453,0.224);
-    vec3 colorA = vec3(0.834,1.000,0.621);
+//    float rand(vec2 st) {
+//        return fract(sin(dot(st.xy, vec2(12.9898, 78.233)))*43758.5453123);
+//    }
 
-    vec2 tile(vec2 st, float zoom) {
-        st *= zoom;
-        return fract(st);
+//    float noise(float x) {
+//        float i = floor(x);
+//        float f = fract(x);
+//        float u = f * f * (3.0 - 2.0 * f);
+//        return mix(rand(i), rand(i+1.0), u);
+//    }
+
+    float smoothedge(float v) {
+        return smoothstep(0.0, 1.0 / u_resolution.x, v);
+    }
+
+    float circle(vec2 p, float radius) {
+        return length(p) - radius;
+    }
+
+    float capsule(vec2 p, vec2 a, vec2 b, float r) {
+        vec2 pa = p - a, ba = b - a;
+        float h = clamp( dot(pa,ba)/dot(ba,ba), 0.0, 1.0 );
+        return length( pa - ba*h ) - r;
     }
 
     vec2 rotate(vec2 st, float angle) {
-        return mat2(cos(angle), -sin(angle), sin(angle), cos(angle)) * (st-0.5)+0.5;
+        return mat2(cos(angle), -sin(angle), sin(angle), cos(angle)) * (st-0.05)+0.05;
     }
 
-    float circleSDF(vec2 st, float size) {
-        return length(st-0.5)*size;
+    float fill(float sdf, float w) {
+        return 1. - step(w, sdf);
     }
 
-    float sdCircle(vec2 st, float radius) {
-        return length(st) - radius;
+    float bg_fill(float sdf, float w) {
+        return step(w, sdf);
     }
 
     void main() {
         vec2 st = gl_FragCoord.xy/u_resolution.xy;
         st.x *= u_resolution.x/u_resolution.y;
-        vec3 color = vec3(0.7);
-//        st = rotate(st, PI);
 
-        float circle1 = sdCircle(st-0.5, 0.02);
-        color *= vec3(circle1);
+        // time study
+        float t = u_time * 4.0;
+        float t_size = u_time * 0.5;
+        st.x += cos(t+st.y*7.)*.04;
+        st.y -= sin(t+st.x*3.)*.04;
+
+        float angle = 0.;
+        angle += 0.2;
+        st = rotate(st, angle*t*0.2);
+        // grid study
+        float grid = 1.9;
+        vec2 st_i = floor(st*grid);
+        vec2 st_f = fract(st*grid);
+
+        // bg
+        float c = circle(st_f - vec2(0.2), 0.18);
+        c = min(c, capsule(st_f - vec2(0.5,0.5), vec2(sin(u_time)*0.3, -0.03), vec2(0.05, 0.05), 0.05));
+//        float c = capsule(st_f - vec2(0.5, 0.8), vec2(-0.05, -0.05), vec2(0.05, 0.05), 0.05));
+        vec3 color = vec3(0.804, 0.322, 0.1112);
+        color += smoothedge(c);
+//        color *= bg_fill(c, 0.012);
         gl_FragColor = vec4(color, 1.0);
+
     }
 </script>
 <script>
