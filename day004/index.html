@@ -38,7 +38,7 @@
     vec2 polar(in vec2 st) {
         vec2 toCenter = vec2(.5) - st;
         float angle = atan(toCenter.y, toCenter.x) / TWO_PI + .5;
-        float radius = length(toCenter) * 2.;
+        float radius = length(toCenter) * 6.;
         return vec2(angle, radius);
     }
 
