@@ -7,6 +7,7 @@
 <body>
 <div id="container"></div>
 <script src="../three.min.js"></script>
+<script src="../libraries/dat.gui.js"></script>
 <script id="vertexShader" type="x-shader/x-vertex">
     void main() {
         //gl_Position = vec4( position, 1.0 );
@@ -22,40 +23,58 @@
     uniform vec2 u_resolution;
     uniform vec2 u_mouse;
     uniform float u_time;
+    uniform float s_time;
+    uniform float s_blurry;
+    uniform float s_freq;
+    uniform float s_red;
+    uniform float s_green;
+    uniform float s_blue;
 
     vec3 colorA = vec3(0.149,0.141,0.912);
     vec3 colorB = vec3(1.000,0.833,0.224);
-    vec3 colorW = vec3(1.0);
-
-    vec2 random2(vec2 st){
-        st = vec2( dot(st,vec2(127.1,311.7)),
-                  dot(st,vec2(269.5,183.3)) );
-        return -1.0 + 2.0*fract(sin(st)*43758.5453123);
+    
+    float random(vec2 st) {
+        return fract(sin(dot(st.xy, vec2(12.9898, 78.233)))*43758.5453123);
     }
-    // Gradient Noise by Inigo Quilez - iq/2013
-    // https://www.shadertoy.com/view/XdXGW8
+    
     float noise(vec2 st) {
         vec2 i = floor(st);
         vec2 f = fract(st);
-    
-        vec2 u = f*f*(3.0-2.0*f);
-    
-        return mix( mix( dot( random2(i + vec2(0.0,0.0) ), f - vec2(0.0,0.0) ),
-                         dot( random2(i + vec2(1.0,0.0) ), f - vec2(1.0,0.0) ), u.x),
-                    mix( dot( random2(i + vec2(0.0,1.0) ), f - vec2(0.0,1.0) ),
-                         dot( random2(i + vec2(1.0,1.0) ), f - vec2(1.0,1.0) ), u.x), u.y);
+        vec2 u = f*f*f*(6.0-3.0*f);
+        return mix( mix( random(i+vec2(0.0, 0.0)),
+                         random(i+vec2(.7, 0.0)), u.x),
+                    mix( random(i+vec2(0.0, 1.0)),
+                         random(i+vec2(.3, 0.0)), u.x), u.y);
     }
+    
+    mat2 rotate2d(float angle) {
+        return mat2(cos(angle), -sin(angle),
+                    sin(angle), cos(angle));
+    }
+    
+    float lines(in vec2 pos, float b, float scale) {
+        pos *= scale;
+        return smoothstep(0.0, 
+                           .5+b*.5,
+                           abs((sin(pos.x*3.1415)+b*2.))*0.3);
+     }
 
     void main(){
         vec2 st = gl_FragCoord.xy / u_resolution;
-        st.y *= u_resolution.y/u_resolution.y;
-        //st.x *= u_mouse.x*0.2;
-        //st *= 2.0;
-        //st = fract(st);
-        float y = smoothstep(0.5, 0.8, st.x*(sin(u_time*2.5)));
-        //float y += smoothstep(0.1, 0.9, st.x*sin(st.x * u_time * 10.0 + 50.0));
-        //float y = smoothstep(0.1, 0.9, sin(floor(st.x)*6.0+sin(u_time*5.0)));
-        vec3 color = mix(colorW, colorB, y);
+        st.y *= u_resolution.y/u_resolution.x;
+
+        vec3 color = vec3(0.0);
+
+        vec2 pos = st.xy*vec2(1., 1.);
+        
+        pos = rotate2d( noise(pos.yx) ) * pos;
+        float pattern = pos.x;
+        
+        pos.x += abs(sin(u_time*0.1)*s_time);
+        pattern = lines(pos, s_blurry, s_freq);
+
+        color = mix(vec3(s_red, s_green, s_blue), colorB, pattern);
+        
         gl_FragColor = vec4(color, 1.0);
       }
 </script>
@@ -64,6 +83,7 @@
     var container;
     var camera, scene, renderer;
     var uniforms;
+    var s_time = 0.2;
 
     init();
     animate();
@@ -81,8 +101,21 @@
         uniforms = {
             u_time: { type: "f", value: 1.0 },
             u_resolution: { type: "v2", value: new THREE.Vector2() },
-            u_mouse: { type: "v2", value: new THREE.Vector2() }
+            u_mouse: { type: "v2", value: new THREE.Vector2() },
+            s_blurry: { type: "f", value: 0.01 },
+            s_freq: { type: "f", value: 5. }, 
+            s_time: { type: "f", value: 3.0 },
+            s_red: { type: "f", value: 1.0 },
+            s_green: { type: "f", value: 1.0 },
+            s_blue: { type: "f", value: 0.78 }
         };
+
+        var gui = new dat.GUI();
+        gui.add(uniforms.s_time, 'value', 0., 5.).name('speed');
+        gui.add(uniforms.s_blurry, 'value', -0.5, 1.0).name('fadedness'); 
+        gui.add(uniforms.s_red, 'value', 0.0, 1.0).name('red');  
+        gui.add(uniforms.s_green, 'value', 0.0, 1.0).name('green');  
+        gui.add(uniforms.s_blue, 'value', 0.0, 1.0).name('blue');      
 
         var material = new THREE.ShaderMaterial( {
             uniforms: uniforms,
