@@ -2,11 +2,12 @@
 <html>
 <head>
     <meta charset="utf-8">
-    <title>13</title>
+    <title>14</title>
 </head>
 <body>
 <div id="container"></div>
 <script src="../three.min.js"></script>
+<script src="../libraries/dat.gui.js"></script>
 <script src="../libraries/src/controls/TrackballControls.js"></script>
 <script src="../libraries/src/controls/DragControls.js"></script>
 <script id="vertexShader" type="x-shader/x-vertex">
@@ -19,30 +20,62 @@
 </script>
 <script id="fragmentShader" type="x-shader/x-fragment">
     #ifdef GL_ES
-    precision highp float;
+    precision mediump float;
     #endif
 
     uniform vec2 u_resolution;
     uniform vec2 u_mouse;
     uniform float u_time;
     uniform sampler2D texture;
-    uniform float percent; 
+    uniform float grid;
 
     varying vec2 vUv;
-    
-    vec3 mask = vec3(0.44, 0.98, 0.0);
-    float gradient = 0.275;
-      
-      void main(void) {
+
+    vec3 red = vec3(1.0, 0.0, 0.0);
+    vec3 blue = vec3(0.0, 0.0, 1.0);
+
+    vec3 verticalGradient(vec2 st) {
+        return mix(red, blue, st.y);
+    }
+
+    float random(vec2 st) {
+        return fract(sin(dot(st.xy, vec2(20., 30.1244))) * 25. + u_time);
+    }
+
+    vec2 distort(vec2 st) {
+        float sinewave = sin(st.x * 20.0 + u_time) * .1;
+        st.y += sinewave;
+        return st;
+    }
+
+    float ease(float time) {
+        return 0.1+.5*abs(sin(time * time)) + 2.*abs(sin(time * time * time));    
+    }
+
+    vec4 colorShift(vec2 st) {
+        //st.y = 1.0 - st.y;
+        
+        float offset = ease(fract(u_time * 1.) * .25);
+        vec2 stR = vec2(st.x + offset, st.y);
+        vec2 stG = st;
+        vec2 stB = vec2(st.x - offset, st.y);
+
+        float red = texture2D(texture, stR).r ;
+        float green = texture2D(texture, stG).g;
+        float blue = texture2D(texture, stB).b;
+
+        return vec4(red* .75, green, blue * 3.0, 1.);
+    }
+
+    void main() {
         vec2 st = gl_FragCoord.xy/u_resolution.xy;
         vec2 position = vUv;
+        position += fract(position*grid*.5);
+        vec4 color = colorShift(position);
+        gl_FragColor = color;
 
-        vec4 cga = texture2D(texture, position);
-
-        gl_FragColor = vec4(cga);
-      }
+    }
 </script>
-
 <script>
     var container;
     var camera, scene, renderer;
@@ -55,29 +88,34 @@
     function init() {
         container = document.getElementById( 'container' );
 
+        //camera = new THREE.Camera();
+        //camera.position.z = 2;
         camera = new THREE.PerspectiveCamera( 40, window.innerWidth / window.innerHeight, 1, 3000);
-        camera.position.z = 40;
+        camera.position.z = 10;
 
         scene = new THREE.Scene();
 
         //var geometry = new THREE.PlaneBufferGeometry( 2, 2 );
-        //var geometry = new THREE.BoxGeometry(8,8,8);
-        var geometry = new THREE.SphereGeometry(3, 21, 10);
+        var geometry = new THREE.BoxGeometry(2, 2, 2);
 
         uniforms = {
             u_time: { type: "f", value: 1.0 },
             u_resolution: { type: "v2", value: new THREE.Vector2() },
-            u_mouse: { type: "v2", value: new THREE.Vector2() },
-            texture: { value: new THREE.TextureLoader().load("cloud.jpg") }
+            u_mouse: { type: "v2", value: new THREE.Vector2() }, 
+            texture: { value: new THREE.TextureLoader().load("banana.jpg") }, 
+            grid: { type: "f", value: 1.0 }
         };
+
+        var gui = new dat.GUI();
+        gui.add(uniforms.grid, 'value', 1.0, 18.0).name('gr1d');
 
         var material = new THREE.ShaderMaterial( {
             uniforms: uniforms,
             vertexShader: document.getElementById( 'vertexShader' ).textContent,
-            fragmentShader: document.getElementById( 'fragmentShader' ).textContent,
+            fragmentShader: document.getElementById( 'fragmentShader' ).textContent, 
             blending: THREE.NormalBlending,
-            depthTest: false,
-            transparent: true
+            transparent: true,
+            depthTest: false
         } );
 
         material.transparent = true;
@@ -86,17 +124,15 @@
         scene.add( mesh );
 
         renderer = new THREE.WebGLRenderer( {antialias: true} );
-        renderer.setClearColor( 0xEEE0FF);
-
+        renderer.setClearColor( 0xffffff);
         renderer.setPixelRatio( window.devicePixelRatio );
 
         container.appendChild( renderer.domElement );
 
         onWindowResize();
-
         window.addEventListener( 'resize', onWindowResize, false );
 
-        // controls!
+        // controls
         controls = new THREE.TrackballControls( camera );
         controls.rotateSpeed = 1.0;
         controls.zoomSpeed = 1.2;
@@ -108,10 +144,10 @@
         controls.keys = [ 65, 83, 68 ];
         controls.addEventListener( 'change', render );
 
-        document.onmousemove = function(e){
-            uniforms.u_mouse.value.x = e.pageX
-            uniforms.u_mouse.value.y = e.pageY
-        }
+        // document.onmousemove = function(e){
+        //     uniforms.u_mouse.value.x = e.pageX
+        //     uniforms.u_mouse.value.y = e.pageY
+        // }
     }
 
     function onWindowResize( event ) {
@@ -125,14 +161,14 @@
     function animate() {
         requestAnimationFrame( animate );
         render();
-        controls.update();
     }
 
     function render() {
         var delta = clock.getDelta();
         uniforms.u_time.value += delta;
-        mesh.rotation.y -= delta * 0.1;
-        mesh.rotation.x -= delta * 0.01;
+        mesh.rotation.y += delta * 0.1;
+        mesh.rotation.x -= delta * 0.3;
+        mesh.rotation.z += delta * 0.20;
         renderer.render( scene, camera );
     }
 </script>
