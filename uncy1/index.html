@@ -2,7 +2,7 @@
 <html>
 <head>
     <meta charset="utf-8">
-    <title>UNCY1</title>
+    <title>UNCY-yellow</title>
 </head>
 <body>
 <div id="container"></div>
@@ -30,22 +30,43 @@
     uniform float s_blue;
 
     vec3 c_yellow = vec3(0.996, 0.906, 0.055);
-    vec3 c_white = vec3(1.0, 1.0, 1.0);
+    vec3 c_white = vec3(1.);
     
     float random(vec2 st) {
         return fract(sin(dot(st.xy, vec2(12.9898, 78.233)))*43758.5453123);
     }
 
+    float noise(vec2 st) {
+        vec2 i = floor(st);
+        vec2 f = fract(st);
+        vec2 u = f*f*f*(6.0-3.0*f);
+        return mix( mix( random(i+vec2(0.0, 0.0)),
+                         random(i+vec2(1.0, 0.0)), u.x),
+                    mix( random(i+vec2(0.0, 1.0)),
+                         random(i+vec2(1.0, 0.0)), u.x), u.y);
+    }
+
+    float fill(float sdf, float w) {
+        return 1.-step(w, sdf);
+    }
 
     void main(){
         vec2 st = gl_FragCoord.xy / u_resolution;
         st.y *= u_resolution.y/u_resolution.x;
-        float gradient = smoothstep(s_break, 0.9, st.x);
-        gradient *= step(gradient, .9*st.x);
-        float movement = abs(sin(st.x + u_time*s_speed));
+        st.x *= u_mouse.x*0.004;
+        float range = noise(st);
+        float gradient = smoothstep(0.39, .9, st.x);
+        gradient *= step(smoothstep(0.1, 0.9,gradient), 0.9-st.x);
+
+        float movement = abs(cos(st.x + u_time*s_speed))+0.30;
         gradient += movement;
+
         vec3 color = 1.-vec3(gradient);
-        color += vec3(s_red, s_green, s_blue);
+
+        //color += vec3(s_red+0.3, s_green+0.2, s_blue);
+        //color += vec3(c_yellow+0.5);
+
+        color += mix(1.-c_yellow, c_white, gradient+0.1);
         gl_FragColor = vec4(color, 1.0);
       }
 </script>
@@ -72,16 +93,16 @@
             u_time: { type: "f", value: 1.0 },
             u_resolution: { type: "v2", value: new THREE.Vector2() },
             u_mouse: { type: "v2", value: new THREE.Vector2() },
-            s_break: { type: "f", value: 0.1 },
-            s_red: { type: "f", value: 0.8 },
-            s_green: { type: "f", value: 0.6 },
-            s_blue: { type: "f", value: 0.0 },
-            s_speed: { type: "f", value: 0.08}
+            s_break: { type: "f", value: 0.39 },
+            s_red: { type: "f", value: 0.89 },
+            s_green: { type: "f", value: 0.59 },
+            s_blue: { type: "f", value: 0.2 },
+            s_speed: { type: "f", value: -0.132}
         };
 
         var gui = new dat.GUI();
-        gui.add(uniforms.s_break, 'value', 0., 1.0).name('cutoff');
-        gui.add(uniforms.s_speed, 'value', -0.5, 0.1).name('speed');
+        gui.add(uniforms.s_break, 'value', 0., 0.61).name('cutoff');
+        gui.add(uniforms.s_speed, 'value', -0.5, -0.1).name('speed');
         gui.add(uniforms.s_red, 'value', 0.3, 1.0).name('red');
         gui.add(uniforms.s_green, 'value', 0.3, 1.0).name('green');
         gui.add(uniforms.s_blue, 'value', 0.0, 1.0).name('blue');

@@ -62,7 +62,7 @@
         vec2 pos = st;
         //pos.x += abs(sin(u_time*0.55))+0.5;
 
-        float pattern = lines(pos, .2, .4*noise(st));
+        float pattern = lines(pos, .2, +.4*noise(st));
 
         color = mix(c_yellow, c_blue, pattern);
         color += mix(c_red, c_green, pattern);
