@@ -2,7 +2,7 @@
 <html>
 <head>
     <meta charset="utf-8">
-    <title>12. the strip</title>
+    <title>UNCY1</title>
 </head>
 <body>
 <div id="container"></div>
@@ -10,7 +10,7 @@
 <script src="../libraries/dat.gui.js"></script>
 <script id="vertexShader" type="x-shader/x-vertex">
     void main() {
-        //gl_Position = vec4( position, 1.0 );
+        gl_Position = vec4( position, 1.0 );
         vec4 modelViewPosition = modelViewMatrix * vec4(position, 1.0);
         gl_Position = projectionMatrix * modelViewPosition;
     }
@@ -23,58 +23,29 @@
     uniform vec2 u_resolution;
     uniform vec2 u_mouse;
     uniform float u_time;
-    uniform float s_time;
-    uniform float s_blurry;
-    uniform float s_freq;
+    uniform float s_break; 
+    uniform float s_speed;
     uniform float s_red;
-    uniform float s_green;
+    uniform float s_green; 
     uniform float s_blue;
 
-    vec3 colorA = vec3(0.149,0.141,0.912);
-    vec3 colorB = vec3(1.000,0.833,0.224);
+    vec3 c_yellow = vec3(0.996, 0.906, 0.055);
+    vec3 c_white = vec3(1.0, 1.0, 1.0);
     
     float random(vec2 st) {
         return fract(sin(dot(st.xy, vec2(12.9898, 78.233)))*43758.5453123);
     }
-    
-    float noise(vec2 st) {
-        vec2 i = floor(st);
-        vec2 f = fract(st);
-        vec2 u = f*f*f*(6.0-3.0*f);
-        return mix( mix( random(i+vec2(0.0, 0.0)),
-                         random(i+vec2(.7, 0.0)), u.x),
-                    mix( random(i+vec2(0.0, 1.0)),
-                         random(i+vec2(.3, 0.0)), u.x), u.y);
-    }
-    
-    mat2 rotate2d(float angle) {
-        return mat2(cos(angle), -sin(angle),
-                    sin(angle), cos(angle));
-    }
-    
-    float lines(in vec2 pos, float b, float scale) {
-        pos *= scale;
-        return smoothstep(0.0, 
-                           .5+b*.5,
-                           abs((sin(pos.x*3.1415)+b*2.))*0.3);
-     }
+
 
     void main(){
         vec2 st = gl_FragCoord.xy / u_resolution;
         st.y *= u_resolution.y/u_resolution.x;
-
-        vec3 color = vec3(0.0);
-
-        vec2 pos = st.xy*vec2(1., 1.);
-        
-        pos = rotate2d( noise(pos.yx) ) * pos;
-        float pattern = pos.x;
-        
-        pos.x += abs(sin(u_time*0.1)*s_time);
-        pattern = lines(pos, s_blurry, s_freq);
-
-        color = mix(vec3(s_red, s_green, s_blue), colorB, pattern);
-        
+        float gradient = smoothstep(s_break, 0.9, st.x);
+        gradient *= step(gradient, .9*st.x);
+        float movement = abs(sin(st.x + u_time*s_speed));
+        gradient += movement;
+        vec3 color = 1.-vec3(gradient);
+        color += vec3(s_red, s_green, s_blue);
         gl_FragColor = vec4(color, 1.0);
       }
 </script>
@@ -83,7 +54,6 @@
     var container;
     var camera, scene, renderer;
     var uniforms;
-    var s_time = 0.2;
 
     init();
     animate();
@@ -102,20 +72,19 @@
             u_time: { type: "f", value: 1.0 },
             u_resolution: { type: "v2", value: new THREE.Vector2() },
             u_mouse: { type: "v2", value: new THREE.Vector2() },
-            s_blurry: { type: "f", value: 0.01 },
-            s_freq: { type: "f", value: 5. }, 
-            s_time: { type: "f", value: 3.0 },
-            s_red: { type: "f", value: 1.0 },
-            s_green: { type: "f", value: 1.0 },
-            s_blue: { type: "f", value: 0.78 }
+            s_break: { type: "f", value: 0.1 },
+            s_red: { type: "f", value: 0.8 },
+            s_green: { type: "f", value: 0.6 },
+            s_blue: { type: "f", value: 0.0 },
+            s_speed: { type: "f", value: 0.08}
         };
 
         var gui = new dat.GUI();
-        gui.add(uniforms.s_time, 'value', 0., 5.).name('speed');
-        gui.add(uniforms.s_blurry, 'value', -0.5, 1.0).name('fadedness'); 
-        gui.add(uniforms.s_red, 'value', 0.0, 1.0).name('red');  
-        gui.add(uniforms.s_green, 'value', 0.0, 1.0).name('green');  
-        gui.add(uniforms.s_blue, 'value', 0.0, 1.0).name('blue');      
+        gui.add(uniforms.s_break, 'value', 0., 1.0).name('cutoff');
+        gui.add(uniforms.s_speed, 'value', -0.5, 0.1).name('speed');
+        gui.add(uniforms.s_red, 'value', 0.3, 1.0).name('red');
+        gui.add(uniforms.s_green, 'value', 0.3, 1.0).name('green');
+        gui.add(uniforms.s_blue, 'value', 0.0, 1.0).name('blue');
 
         var material = new THREE.ShaderMaterial( {
             uniforms: uniforms,
@@ -158,4 +127,3 @@
 </script>
 </body>
 </html>
-

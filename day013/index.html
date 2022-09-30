@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>13</title>
+</head>
+<body>
+<div id="container"></div>
+<script src="../three.min.js"></script>
+<script src="../libraries/src/controls/TrackballControls.js"></script>
+<script src="../libraries/src/controls/DragControls.js"></script>
+<script id="vertexShader" type="x-shader/x-vertex">
+    varying vec2 vUv;
+    void main() {
+        vUv = uv;
+        vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
+        gl_Position = projectionMatrix * mvPosition;
+    }
+</script>
+<script id="fragmentShader" type="x-shader/x-fragment">
+    #ifdef GL_ES
+    precision highp float;
+    #endif
+
+    uniform vec2 u_resolution;
+    uniform vec2 u_mouse;
+    uniform float u_time;
+    uniform sampler2D texture;
+    uniform float percent; 
+
+    varying vec2 vUv;
+    
+    vec3 mask = vec3(0.44, 0.98, 0.0);
+    float gradient = 0.275;
+      
+      void main(void) {
+        vec2 st = gl_FragCoord.xy/u_resolution.xy;
+        vec2 position = vUv;
+
+        vec4 cga = texture2D(texture, position);
+
+        gl_FragColor = vec4(cga);
+      }
+</script>
+
+<script>
+    var container;
+    var camera, scene, renderer;
+    var uniforms, material, mesh;
+    var clock = new THREE.Clock();
+
+    init();
+    animate();
+
+    function init() {
+        container = document.getElementById( 'container' );
+
+        camera = new THREE.PerspectiveCamera( 40, window.innerWidth / window.innerHeight, 1, 3000);
+        camera.position.z = 40;
+
+        scene = new THREE.Scene();
+
+        //var geometry = new THREE.PlaneBufferGeometry( 2, 2 );
+        //var geometry = new THREE.BoxGeometry(8,8,8);
+        var geometry = new THREE.SphereGeometry(3, 21, 10);
+
+        uniforms = {
+            u_time: { type: "f", value: 1.0 },
+            u_resolution: { type: "v2", value: new THREE.Vector2() },
+            u_mouse: { type: "v2", value: new THREE.Vector2() },
+            texture: { value: new THREE.TextureLoader().load("cloud.jpg") }
+        };
+
+        var material = new THREE.ShaderMaterial( {
+            uniforms: uniforms,
+            vertexShader: document.getElementById( 'vertexShader' ).textContent,
+            fragmentShader: document.getElementById( 'fragmentShader' ).textContent,
+            blending: THREE.NormalBlending,
+            depthTest: false,
+            transparent: true
+        } );
+
+        material.transparent = true;
+
+        mesh = new THREE.Mesh( geometry, material );
+        scene.add( mesh );
+
+        renderer = new THREE.WebGLRenderer( {antialias: true} );
+        renderer.setClearColor( 0xEEE0FF);
+
+        renderer.setPixelRatio( window.devicePixelRatio );
+
+        container.appendChild( renderer.domElement );
+
+        onWindowResize();
+
+        window.addEventListener( 'resize', onWindowResize, false );
+
+        // controls!
+        controls = new THREE.TrackballControls( camera );
+        controls.rotateSpeed = 1.0;
+        controls.zoomSpeed = 1.2;
+        controls.panSpeed = 0.8;
+        controls.noZoom = false;
+        controls.noPan = false;
+        controls.staticMoving = true;
+        controls.dynamicDampingFactor = 0.3;
+        controls.keys = [ 65, 83, 68 ];
+        controls.addEventListener( 'change', render );
+
+        document.onmousemove = function(e){
+            uniforms.u_mouse.value.x = e.pageX
+            uniforms.u_mouse.value.y = e.pageY
+        }
+    }
+
+    function onWindowResize( event ) {
+        camera.aspect = window.innerWidth / window.innerHeight;
+        camera.updateProjectionMatrix();
+        renderer.setSize( window.innerWidth, window.innerHeight );
+        uniforms.u_resolution.value.x = renderer.domElement.width;
+        uniforms.u_resolution.value.y = renderer.domElement.height;
+    }
+
+    function animate() {
+        requestAnimationFrame( animate );
+        render();
+        controls.update();
+    }
+
+    function render() {
+        var delta = clock.getDelta();
+        uniforms.u_time.value += delta;
+        mesh.rotation.y -= delta * 0.1;
+        mesh.rotation.x -= delta * 0.01;
+        renderer.render( scene, camera );
+    }
+</script>
+</body>
+</html>
